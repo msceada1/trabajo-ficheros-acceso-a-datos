@@ -1,0 +1,136 @@
+# =========================================================================
+# 1. UNIVERSAL / ARCHIVOS DE SISTEMA
+# =========================================================================
+# Logs
+*.log
+# Archivos temporales
+*.tmp
+*~
+*.bak
+
+# Archivos de Swap de Vim
+[._]*.s[a-v][a-z]
+*.swp
+.*.swp
+
+# Archivos de macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Archivos de Windows
+Thumbs.db
+ehthumbs.db
+
+# =========================================================================
+# 2. ARCHIVOS SENSIBLES / DE ENTORNO
+# =========================================================================
+# Archivos de entorno (contienen secretos, claves API, credenciales)
+.env
+*.env
+.env.*
+
+# Configuración local que no debe compartirse
+*.local
+
+# =========================================================================
+# 3. INTELLIJ IDEA (Configuración del IDE)
+# =========================================================================
+# Directorio principal de la configuración (CRUCIAL IGNORAR)
+.idea/
+
+# Archivos de módulo, espacio de trabajo y proyecto
+*.iml
+*.iws
+*.ipr
+
+.idea_modules/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/shelf/
+.idea/contentModel.xml
+.idea/dataSources/
+.idea/dataSources.xml
+.idea/dataSources.ids
+.idea/dataSources.local.xml
+.idea/sqlDataSources.xml
+.idea/dynamic.xml
+.idea/uiDesigner.xml
+.idea/gradle.xml
+.idea/libraries
+.idea/deployment.xml
+.idea/mongoSettings.xml
+.idea/httpRequests
+.idea/caches/
+.idea/modules.xml
+.idea/compiler.xml
+.idea/jarRepositories.xml
+.idea/artifacts
+.idea/sonarlint/
+*.iml.bak
+*.ipr.bak
+*.iws.bak
+.idea_backup/
+.idea/replstate.xml
+.idea/checkstyle-idea.xml
+.idea/encodings.xml
+.idea/misc.xml
+.idea/vcs.xml
+.idea/jsLibraryMappings.xml
+.idea/assetWizardSettings.xml
+.idea/kotlinc.xml
+.idea/inspectionProfiles/
+.idea/codestream.xml
+.idea/aws.xml
+.idea/sonarIssues.xml
+.idea/.gitignore
+.idea/remote-mappings.xml
+.idea/**/usage.statistics.xml
+.idea/**/contentModel.xml
+.idea/**/dbnavigator.xml
+.idea/**/markdown-navigator.xml
+.idea/**/markdown-navigator-enh.xml
+.idea/**/markdown-navigator/
+.idea/$CACHE_FILE$
+.idea/**/azureSettings.xml
+
+# Otros específicos del IDE
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+
+# =========================================================================
+# 4. ARTEFACTOS DE COMPILACIÓN Y SALIDA (Java/Maven/Gradle)
+# =========================================================================
+# Directorios de compilación y salida (Maven, Gradle, Java)
+out/
+target/
+build/
+bin/
+
+# Archivos de clase compilados
+*.class
+
+# Archivos generados (JARs, WARs, etc.)
+*.jar
+*.war
+*.ear
+*.zip
+*.tar
+*.gz
+
+# =========================================================================
+# 5. HERRAMIENTAS DE BUILD (Cachés y Wrappers)
+# =========================================================================
+# Caché local de Gradle
+.gradle/
+
+# Caché local de Maven
+.m2/
+
+# Archivos wrapper específicos del usuario
+gradlew.bat.orig
+gradlew.orig
