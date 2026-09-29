@@ -49,5 +49,9 @@ public class GestorBBDD {
         }
     }
 
+    private static void cargarFicherocsv() {
+
+    }
+
 
 }
