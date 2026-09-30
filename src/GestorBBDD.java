@@ -1,4 +1,6 @@
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -16,8 +18,8 @@ public class GestorBBDD {
     private static final String PRIMARY_KEY = "Matricula";
 
     private final Map<String, Integer> campos = new LinkedHashMap<>();
-    private int longitudRegistro;
-    private long numeroRegistros;
+    private int longitudRegistro; //indica la longitud que tiene un registro en bytes
+    private long numeroRegistros; //indica la longitud de registros que hay en bytes
     private long registrosBorrados;
 
     //constructor
@@ -53,5 +55,40 @@ public class GestorBBDD {
 
     }
 
+    private static void cumpleBytes(Map<String, Integer> valores, Integer bytesACumplir) { //preguntar
+
+    }
+
+    private Map<String, Integer> buscarRegistro() {
+        try (InputStream in = Files.newInputStream(RUTA_FICHERO_CARGA_BBDD)) {
+            int pos = 0;
+
+            while (pos < this.numeroRegistros) {
+                byte[] buffer = new byte[this.longitudRegistro];
+                if (in.read(buffer) < this.longitudRegistro) {
+                    return null;
+                }
+
+                if (buffer[0] == 0) { //preguntar
+                    pos++;
+                    continue;
+                }
+
+                int referencia = 0;
+                String claveLeida = null;
+
+                this.campos.values().stream().filter()
+
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+
+    private String extraerStringDeBytes(byte[] buffer, int offset, int longitud) {
+        String texto = new String(buffer, offset, longitud, StandardCharsets.UTF_8);
+        return texto.trim();
+    }
 
 }
