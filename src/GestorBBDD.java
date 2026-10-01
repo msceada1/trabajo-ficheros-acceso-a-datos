@@ -5,11 +5,11 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class GestorBBDD {
-
 
     private static final byte ESPACIO_EN_BLANCO = (byte) ' ';
     private static final int MAX_BYTES_MATRICULA = 7;
@@ -20,13 +20,13 @@ public class GestorBBDD {
     private static final Path RUTA_FICHERO_CARGA_BBDD = Path.of("src", "ficheros", "carga_coches.dat");
     private static final String PRIMARY_KEY = "Matricula";
     private static final String SECOND_KEY = "Marca";
-    private static final String THIRD_KEY = "Marca";
+    private static final String THIRD_KEY = "Modelo"; // Corregido de "Marca" a "Modelo"
 
     private final Map<String, Integer> campos = new LinkedHashMap<>();
-    private long numeroRegistros; //indica la longitud de registros que hay en bytes
+    private long numeroRegistros; // indica la longitud de registros que hay en bytes
     private long registrosBorrados;
 
-    //constructor
+    // Constructor
     public GestorBBDD() {
         campos.put(PRIMARY_KEY, MAX_BYTES_MATRICULA);
         campos.put(SECOND_KEY, MAX_BYTES_MARCA);
@@ -53,51 +53,41 @@ public class GestorBBDD {
     private static void cargarFicherocsv() {
     }
 
-    private static byte[] pasarRegistroABytes() {
+    private byte[] pasarRegistroABytes() {
         byte[] arrayDeBytes = new byte[LONGITUD_TOTAL_REGISTRO_EN_BYTES];
 
+
+        return arrayDeBytes;
     }
-}
 
-private static void cumpleBytes(String campo, int bytesACumplir) throws LimiteBytesException {
-    byte campoEnBytes = (byte) campo.getBytes(StandardCharsets.UTF_8).length;
+    /**
+     * Metodo encargado de comprobar los bytes que ocupa el campo introducido y rellenar
+     * si no llega a los bytes que debe cumplir
+     * @param campo el campo del registro a comprobar
+     * @param bytesACumplir los bytes que debe ocupar el campo
+     * @return un array de bytes con los indices que ocupa cada byte
+     * @throws LimiteBytesException si los bytes sobrepasan la longitud a cumplir
+     */
+    private byte[] formatearCampoABytes(String campo, int bytesACumplir) throws LimiteBytesException {
+        byte[] bytesEntrantes = campo.getBytes(StandardCharsets.UTF_8);
 
-    if (campoEnBytes > bytesACumplir) {
-        throw new LimiteBytesException("Uno de los campos ha pasado del limite de espacio");
-    } else {
+        if (bytesEntrantes.length > bytesACumplir) {
+            throw new LimiteBytesException("Uno de los campos ha pasado del limite de espacio");
+        }
 
+        byte[] bytesCumplidos = new byte[bytesACumplir];
+
+        Arrays.fill(bytesCumplidos, ESPACIO_EN_BLANCO);
+        System.arraycopy(bytesEntrantes, 0, bytesCumplidos, 0, bytesEntrantes.length);
+
+
+        return bytesCumplidos;
     }
-}
 
-public void insertar(Map<String, Integer> registroALeer) {
+    public void insertar(Map<String, Integer> registroALeer) {
+    }
 
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
+    /*
     private Map<String, Integer> buscarRegistro() {
         try (InputStream in = Files.newInputStream(RUTA_FICHERO_CARGA_BBDD)) {
             int pos = 0;
@@ -123,16 +113,12 @@ public void insertar(Map<String, Integer> registroALeer) {
             System.out.println(e.getMessage());
         }
     }
+    */
 
- */
-
-/*
+    /*
     private String extraerStringDeBytes(byte[] buffer, int offset, int longitud) {
         String texto = new String(buffer, offset, longitud, StandardCharsets.UTF_8);
         return texto.trim();
     }
-
- */
-
+    */
 }
-
