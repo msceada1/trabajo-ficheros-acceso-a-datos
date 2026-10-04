@@ -65,10 +65,10 @@ public class GestorBBDD {
      * si no llega a los bytes que debe cumplir
      * @param campo el campo del registro a comprobar
      * @param bytesACumplir los bytes que debe ocupar el campo
-     * @return un array de bytes con los indices que ocupa cada byte
+     * @return un array de bytes con los bytes que ocupa el campo
      * @throws LimiteBytesException si los bytes sobrepasan la longitud a cumplir
      */
-    private byte[] formatearCampoABytes(String campo, int bytesACumplir) throws LimiteBytesException {
+    private byte[] covertirCampoABytes(String campo, int bytesACumplir) throws LimiteBytesException {
         byte[] bytesEntrantes = campo.getBytes(StandardCharsets.UTF_8);
 
         if (bytesEntrantes.length > bytesACumplir) {
@@ -77,7 +77,9 @@ public class GestorBBDD {
 
         byte[] bytesCumplidos = new byte[bytesACumplir];
 
-        Arrays.fill(bytesCumplidos, ESPACIO_EN_BLANCO);
+        Arrays.fill(bytesCumplidos, ESPACIO_EN_BLANCO); //bytes cumplidos se llena de espacios en blanco
+
+        //los bytes del campo se guardan dentro de bytesCumplidos
         System.arraycopy(bytesEntrantes, 0, bytesCumplidos, 0, bytesEntrantes.length);
 
 
