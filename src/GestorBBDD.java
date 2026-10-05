@@ -1,9 +1,7 @@
 import exceptions.LimiteBytesException;
+import exceptions.RegistroDuplicadoException;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -108,9 +106,44 @@ public class GestorBBDD {
         return bytesCumplidos;
     }
 
-    public void insertar(Map<String, Integer> registroALeer) {
+    public void insertar(Map<String, String> registroALeer) throws RegistroDuplicadoException {
+        String valorMatricula = registroALeer.get(PRIMARY_KEY);
+
+        try {
+            if (registroExiste(valorMatricula)) {
+                throw new RegistroDuplicadoException("Error: el registro ya existe");
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+        byte[] registroABytes;
+
+        try {
+            registroABytes = pasarRegistroABytes(registroALeer);
+        } catch (LimiteBytesException e) {
+            System.out.println(e.getMessage());
+        }
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE)) {
+            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+
+
+
+
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
     }
 
+    /**
+     * Metodo que comprueba si un registro ya existe o no
+     *
+     * @param matricula la matricula del coche a insertar
+     * @return true si el registro existe o false en caso contrario
+     * @throws IOException
+     */
     private boolean registroExiste(String matricula) throws IOException {
         try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
             ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
@@ -119,7 +152,7 @@ public class GestorBBDD {
                 fl.read(bf); //vuelca el contenido en el Buffer
                 byte[] lecturaRegistro = bf.array();
 
-                if (lecturaRegistro[0] == 0) {
+                if (lecturaRegistro[0] == 0) { //registro borrado
                     bf.clear();
                     continue;
                 }
@@ -137,7 +170,7 @@ public class GestorBBDD {
                 if (valorClaveLeida != null && valorClaveLeida.equals(matricula)) {
                     return true;
                 }
-                bf.clear();
+                bf.clear(); //el buffer se "vacia" para que en la siguiente iteracion no tenga los datos del registro anterior
             }
         }
         return false;
