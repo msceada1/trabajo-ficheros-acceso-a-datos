@@ -1,10 +1,15 @@
 import exceptions.LimiteBytesException;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -20,10 +25,10 @@ public class GestorBBDD {
     private static final Path RUTA_FICHERO_CARGA_BBDD = Path.of("src", "ficheros", "carga_coches.dat");
     private static final String PRIMARY_KEY = "Matricula";
     private static final String SECOND_KEY = "Marca";
-    private static final String THIRD_KEY = "Modelo"; // Corregido de "Marca" a "Modelo"
+    private static final String THIRD_KEY = "Modelo";
 
     private final Map<String, Integer> campos = new LinkedHashMap<>();
-    private long numeroRegistros; // indica la longitud de registros que hay en bytes
+    private long numeroRegistros; // indica la longitud de registros que hay
     private long registrosBorrados;
 
     // Constructor
@@ -53,22 +58,39 @@ public class GestorBBDD {
     private static void cargarFicherocsv() {
     }
 
-    private byte[] pasarRegistroABytes() {
+    /**
+     * Metodo encargado de pasar un registro completo a bytes
+     *
+     * @param registro el registro a guardar
+     * @return el registro en un array de bytes
+     * @throws LimiteBytesException si uno de los campos se pasa del limite de bytes que debe ocupar
+     */
+    private byte[] pasarRegistroABytes(Map<String, String> registro) throws LimiteBytesException {
         byte[] arrayDeBytes = new byte[LONGITUD_TOTAL_REGISTRO_EN_BYTES];
+        int desplazamiento = 0;
 
+        for (Map.Entry<String, Integer> campo : this.campos.entrySet()) {
+            String clave = campo.getKey();
+            String valor = registro.getOrDefault(clave, ""); //valor por defecto con "" si no entra valor para evitar nullPointerException
+            int bytesCampo = campo.getValue();
 
+            byte[] buffer = convertirCampoABytes(valor, bytesCampo);
+            System.arraycopy(buffer, 0, arrayDeBytes, desplazamiento, bytesCampo);
+            desplazamiento += bytesCampo;
+        }
         return arrayDeBytes;
     }
 
     /**
      * Metodo encargado de comprobar los bytes que ocupa el campo introducido y rellenar
      * si no llega a los bytes que debe cumplir
-     * @param campo el campo del registro a comprobar
+     *
+     * @param campo         el campo del registro a comprobar
      * @param bytesACumplir los bytes que debe ocupar el campo
      * @return un array de bytes con los bytes que ocupa el campo
      * @throws LimiteBytesException si los bytes sobrepasan la longitud a cumplir
      */
-    private byte[] covertirCampoABytes(String campo, int bytesACumplir) throws LimiteBytesException {
+    private byte[] convertirCampoABytes(String campo, int bytesACumplir) throws LimiteBytesException {
         byte[] bytesEntrantes = campo.getBytes(StandardCharsets.UTF_8);
 
         if (bytesEntrantes.length > bytesACumplir) {
@@ -89,38 +111,53 @@ public class GestorBBDD {
     public void insertar(Map<String, Integer> registroALeer) {
     }
 
-    /*
-    private Map<String, Integer> buscarRegistro() {
-        try (InputStream in = Files.newInputStream(RUTA_FICHERO_CARGA_BBDD)) {
-            int pos = 0;
+    private boolean registroExiste(String matricula) throws IOException {
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
+            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
 
-            while (pos < this.numeroRegistros) {
-                byte[] buffer = new byte[this.longitudRegistro];
-                if (in.read(buffer) < this.longitudRegistro) {
-                    return null;
-                }
+            for (int i = 0; i < this.numeroRegistros; i++) {
+                fl.read(bf); //vuelca el contenido en el Buffer
+                byte[] lecturaRegistro = bf.array();
 
-                if (buffer[0] == 0) { //preguntar
-                    pos++;
+                if (lecturaRegistro[0] == 0) {
+                    bf.clear();
                     continue;
                 }
 
-                int referencia = 0;
-                String claveLeida = null;
+                int desplazamientoCampo = 0;
+                String valorClaveLeida = null;
+                for (Map.Entry<String, Integer> campo : this.campos.entrySet()) {
+                    if (campo.getKey().equals(PRIMARY_KEY)) {
+                        valorClaveLeida = extraerStringDeBytes(lecturaRegistro, desplazamientoCampo, campo.getValue());
+                        break;
+                    }
+                    desplazamientoCampo += campo.getValue();
+                }
 
-                //this.campos.values().stream().filter()
-
+                if (valorClaveLeida != null && valorClaveLeida.equals(matricula)) {
+                    return true;
+                }
+                bf.clear();
             }
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
         }
+        return false;
     }
-    */
+
 
     /*
-    private String extraerStringDeBytes(byte[] buffer, int offset, int longitud) {
-        String texto = new String(buffer, offset, longitud, StandardCharsets.UTF_8);
-        return texto.trim();
+    private Map<String, Integer> buscarRegistro() throws IOException {
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
+            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+        }
     }
-    */
+
+     */
+
+
+    private String extraerStringDeBytes(byte[] buffer, int desplazamiento, int longitud) {
+        String texto = new String(buffer, desplazamiento, longitud, StandardCharsets.UTF_8);
+        return texto.trim(); //los bytes que sean espacios en blanco los quita
+    }
+
+
 }
