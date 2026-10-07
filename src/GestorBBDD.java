@@ -1,4 +1,5 @@
 import exceptions.LimiteBytesException;
+import exceptions.PosicionException;
 import exceptions.RegistroDuplicadoException;
 
 import java.io.IOException;
@@ -53,6 +54,10 @@ public class GestorBBDD {
         }
     }
 
+    public long getNumeroRegistros() {
+        return numeroRegistros;
+    }
+
     private static void cargarFicherocsv() {
     }
 
@@ -76,6 +81,7 @@ public class GestorBBDD {
             System.arraycopy(buffer, 0, arrayDeBytes, desplazamiento, bytesCampo);
             desplazamiento += bytesCampo;
         }
+
         return arrayDeBytes;
     }
 
@@ -102,39 +108,34 @@ public class GestorBBDD {
         //los bytes del campo se guardan dentro de bytesCumplidos
         System.arraycopy(bytesEntrantes, 0, bytesCumplidos, 0, bytesEntrantes.length);
 
-
         return bytesCumplidos;
     }
 
-    public void insertar(Map<String, String> registroALeer) throws RegistroDuplicadoException {
+    public void insertar(Map<String, String> registroALeer, int posicion)
+            throws RegistroDuplicadoException, IOException, PosicionException {
         String valorMatricula = registroALeer.get(PRIMARY_KEY);
 
-        try {
-            if (registroExiste(valorMatricula)) {
-                throw new RegistroDuplicadoException("Error: el registro ya existe");
+        if (registroExiste(valorMatricula)) {
+            throw new RegistroDuplicadoException("Error: el registro ya existe");
+        }
+
+        if (!posicionLibre(posicion)) {
+            throw new PosicionException("Error: La posicion donde deseas insertar esta ocupada");
+        }
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE)) {
+            try {
+                ByteBuffer bf = ByteBuffer.wrap(pasarRegistroABytes(registroALeer)); //convierte un array de bytes en un Buffer
+                fl.position(LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion); //desplazamiento del puntero
+                fl.write(bf);
+                bf.clear();
+                this.numeroRegistros++;
+            } catch (LimiteBytesException e) {
+                System.out.println(e.getMessage());
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
-
-        byte[] registroABytes;
-
-        try {
-            registroABytes = pasarRegistroABytes(registroALeer);
-        } catch (LimiteBytesException e) {
-            System.out.println(e.getMessage());
-        }
-
-        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE)) {
-            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
-
-
-
-
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-
     }
 
     /**
@@ -173,6 +174,7 @@ public class GestorBBDD {
                 bf.clear(); //el buffer se "vacia" para que en la siguiente iteracion no tenga los datos del registro anterior
             }
         }
+
         return false;
     }
 
@@ -219,5 +221,18 @@ public class GestorBBDD {
         return texto.trim(); //los bytes que sean espacios en blanco los quita
     }
 
+    static void main() {
+        GestorBBDD gb = new GestorBBDD();
 
+        Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "Opel", "Modelo", "Astra"));
+/*
+        try {
+            System.out.println(gb.getNumeroRegistros());
+            gb.insertar(coche,);
+        } catch (RegistroDuplicadoException | IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+ */
+    }
 }
