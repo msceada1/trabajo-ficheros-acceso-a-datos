@@ -176,6 +176,33 @@ public class GestorBBDD {
         return false;
     }
 
+    /**
+     * Metodo que comprueba si en el fichero .dat la posicion donde el usuario desea insertar el registro esta libre
+     *
+     * @param posicion la posicion donde el usuario desea insertar el registro
+     * @return true si la posicion esta libre, false en caso contrario
+     */
+    private boolean posicionLibre(int posicion) {
+        int byteIncio = LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion; //variable que indica en que byte empieza el registro
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
+            if (byteIncio >= fl.size()) { //cuando el byte es mayor igual que el total de bytes ocupados en el fichero, esa posicion esta libre
+                return true;
+            }
+
+            fl.position(byteIncio);//el puntero se dirige a la primera posicion del primer byte donde se inserta un registro
+            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+            fl.read(bf);
+            if (bf.array()[0] == 0) { //registro borrado
+                return true;
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return false;
+    }
+
 
     /*
     private Map<String, Integer> buscarRegistro() throws IOException {
