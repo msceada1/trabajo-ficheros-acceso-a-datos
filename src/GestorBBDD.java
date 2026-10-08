@@ -224,15 +224,13 @@ public class GestorBBDD {
     static void main() {
         GestorBBDD gb = new GestorBBDD();
 
-        Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "Opel", "Modelo", "Astra"));
-/*
+        Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "renault", "Modelo", "megane"));
+
         try {
             System.out.println(gb.getNumeroRegistros());
-            gb.insertar(coche,);
-        } catch (RegistroDuplicadoException | IOException e) {
+            gb.insertar(coche, 1);
+        } catch (RegistroDuplicadoException | IOException | PosicionException e) {
             System.out.println(e.getMessage());
         }
-
- */
     }
 }
