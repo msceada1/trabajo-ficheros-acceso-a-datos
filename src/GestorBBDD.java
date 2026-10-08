@@ -123,7 +123,7 @@ public class GestorBBDD {
             throw new PosicionException("Error: La posicion donde deseas insertar esta ocupada");
         }
 
-        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE)) {
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
             try {
                 ByteBuffer bf = ByteBuffer.wrap(pasarRegistroABytes(registroALeer)); //convierte un array de bytes en un Buffer
                 fl.position(LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion); //desplazamiento del puntero
@@ -224,11 +224,11 @@ public class GestorBBDD {
     static void main() {
         GestorBBDD gb = new GestorBBDD();
 
-        Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "renault", "Modelo", "megane"));
+        Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "5678def", "Marca", "seat", "Modelo", "ibiza"));
 
         try {
             System.out.println(gb.getNumeroRegistros());
-            gb.insertar(coche, 1);
+            gb.insertar(coche, 100);
         } catch (RegistroDuplicadoException | IOException | PosicionException e) {
             System.out.println(e.getMessage());
         }
