@@ -112,24 +112,20 @@ public class GestorBBDD {
     }
 
     public void insertar(Map<String, String> registroALeer, int posicion)
-            throws RegistroDuplicadoException, IOException, PosicionException {
+            throws RegistroDuplicadoException, IOException {
         String valorMatricula = registroALeer.get(PRIMARY_KEY);
 
         if (registroExiste(valorMatricula)) {
             throw new RegistroDuplicadoException("Error: el registro ya existe");
         }
 
-        if (!posicionLibre(posicion)) {
-            throw new PosicionException("Error: La posicion donde deseas insertar esta ocupada");
-        }
-
-        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
             try {
                 ByteBuffer bf = ByteBuffer.wrap(pasarRegistroABytes(registroALeer)); //convierte un array de bytes en un Buffer
+                moverRegistro(fl, posicion);//si la posicion estaba ocupada se mueve a la derecha u sus suguientes tambien
                 fl.position(LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion); //desplazamiento del puntero
                 fl.write(bf);
                 bf.clear();
-                this.numeroRegistros++;
             } catch (LimiteBytesException e) {
                 System.out.println(e.getMessage());
             }
@@ -179,30 +175,32 @@ public class GestorBBDD {
     }
 
     /**
-     * Metodo que comprueba si en el fichero .dat la posicion donde el usuario desea insertar el registro esta libre
+     * Metodo encargado de desplazar los registros cuando el usuario desee introducir uno donde hay otro existente
      *
-     * @param posicion la posicion donde el usuario desea insertar el registro
-     * @return true si la posicion esta libre, false en caso contrario
+     * @param fl              el canal de manipulacion del fichero de la base de datos
+     * @param posicionDeseada la posicion donde el usuario quiere introducir un registro
+     * @throws IOException
      */
-    private boolean posicionLibre(int posicion) {
-        int byteIncio = LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion; //variable que indica en que byte empieza el registro
+    private void moverRegistro(FileChannel fl, int posicionDeseada) throws IOException {
+        long totalPlazas = fl.size() / LONGITUD_TOTAL_REGISTRO_EN_BYTES;
 
-        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
-            if (byteIncio >= fl.size()) { //cuando el byte es mayor igual que el total de bytes ocupados en el fichero, esa posicion esta libre
-                return true;
-            }
-
-            fl.position(byteIncio);//el puntero se dirige a la primera posicion del primer byte donde se inserta un registro
-            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
-            fl.read(bf);
-            if (bf.array()[0] == 0) { //registro borrado
-                return true;
-            }
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
+        if (posicionDeseada >= totalPlazas) { //no hay registro que desplazar, se acaba el metodo
+            return;
         }
 
-        return false;
+        ByteBuffer br = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+
+        for (long i = totalPlazas - 1; i >= posicionDeseada; i--) {
+            br.clear();
+
+
+            fl.position(i * LONGITUD_TOTAL_REGISTRO_EN_BYTES); //acceso a la posicion y lectura del coche
+            fl.read(br);
+            br.flip(); //cambio de lectura a escritura
+
+            fl.position((i + 1) * LONGITUD_TOTAL_REGISTRO_EN_BYTES); //desplazamiento
+            fl.write(br);
+        }
     }
 
 
@@ -225,12 +223,5 @@ public class GestorBBDD {
         GestorBBDD gb = new GestorBBDD();
 
         Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "5678def", "Marca", "seat", "Modelo", "ibiza"));
-
-        try {
-            System.out.println(gb.getNumeroRegistros());
-            gb.insertar(coche, 100);
-        } catch (RegistroDuplicadoException | IOException | PosicionException e) {
-            System.out.println(e.getMessage());
-        }
     }
 }
