@@ -203,6 +203,23 @@ public class GestorBBDD {
         }
     }
 
+    /**
+     * Metodo encargado de calcular la cantidad de registros que hay en la base de datos
+     *
+     * @return el numero de registros que hay
+     */
+    public long calcularRegistros() {
+        long registros = 0;
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
+            registros = fl.size() / LONGITUD_TOTAL_REGISTRO_EN_BYTES;
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return registros;
+    }
+
 
     /*
     private Map<String, Integer> buscarRegistro() throws IOException {
