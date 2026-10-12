@@ -54,14 +54,14 @@ public class GestorBBDD {
                     continue;
                 }
 
-                String[] datos = linea.split(",");
+                String[] datos = linea.split(","); //divide los campos
 
                 Map<String, String> coche = new LinkedHashMap<>();
                 coche.put(PRIMARY_KEY, datos[0].trim());
                 coche.put(SECOND_KEY, datos[1].trim());
                 coche.put(THIRD_KEY, datos[2].trim());
 
-                int posAInsetar = (int) calcularRegistros();
+                int posAInsetar = calcularRegistros();
                 try {
                     insertar(coche, posAInsetar);
                 } catch (RegistroDuplicadoException e) {
@@ -123,12 +123,25 @@ public class GestorBBDD {
         return bytesCumplidos;
     }
 
+    /**
+     * Metodo encargado de insertar un registro en la posicion que el usuario desea.
+     *
+     * @param registroALeer el registro que el usuario desea insertar
+     * @param posicion      la posicion en la que el usuario desea insertar el registro
+     * @throws RegistroDuplicadoException si la matricula que el usuario desea insertar ya estaba anteriormente
+     *
+     */
     public void insertar(Map<String, String> registroALeer, int posicion)
             throws RegistroDuplicadoException, IOException {
         String valorMatricula = registroALeer.get(PRIMARY_KEY);
 
         if (registroExiste(valorMatricula)) {
             throw new RegistroDuplicadoException("Error: el registro ya existe");
+        }
+        //si el usuario indica una posicion mayor pero hay hueco antes se mueve el puntero a la posicion libre mas cercana
+        int totalPlazas = calcularRegistros();
+        if (posicion > totalPlazas) {
+            posicion = totalPlazas;
         }
 
         try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
@@ -158,7 +171,7 @@ public class GestorBBDD {
 
 
     private int buscarPorMatricula(String matriculaABuscar) {
-        int totalPlazas = (int) calcularRegistros();
+        int totalPlazas = calcularRegistros();
 
         try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
             ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
@@ -196,24 +209,38 @@ public class GestorBBDD {
     }
 
     /**
-     * Metodo encargado de borrar un registro utilizando el borrado logico, poniendo un 0 en la primera posicion del
-     * registro
+     * Metodo encargado de borrar un registro moviendo el posterior a la posicion del borrado y lo mismo con los
+     * posteriores una posicion menos
      *
      * @param posicion la posicion del coche que se desea eliminar
      * @throws PosicionException si la posicion es mayor que los registros que hay o si es menor que la primera por donde
      *                           se empieza
      */
     public void borrarPorPosicion(int posicion) throws PosicionException {
+        int totalPlazas = calcularRegistros();
         if (posicion >= calcularRegistros() || posicion < 0) {
             throw new PosicionException("Error: posicion no encontrada");
         }
 
-        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE)) {
-            fl.position(LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion);
-            ByteBuffer bf = ByteBuffer.allocate(1);
-            bf.put((byte) 0); //a la primera posicion se le pone 0 (borrado logico)
-            bf.flip();
-            fl.write(bf);
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
+            ByteBuffer br = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+
+            for (int i = posicion + 1; i < totalPlazas; i++) {
+                br.clear();
+
+                //lectura coche derecha
+                fl.position(i * LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+                fl.read(br);
+
+                br.flip();
+
+                //desplazamiento a la posicion izquierda
+                fl.position((i - 1) * LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+                fl.write(br);
+            }
+
+            int longitdArchivo = (int) ((totalPlazas - 1) * LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+            fl.truncate(longitdArchivo);
 
         } catch (IOException e) {
             System.out.println(e.getMessage());
@@ -269,7 +296,7 @@ public class GestorBBDD {
      * @throws IOException
      */
     private void moverRegistro(FileChannel fl, int posicionDeseada) throws IOException {
-        long totalPlazas = fl.size() / LONGITUD_TOTAL_REGISTRO_EN_BYTES;
+        int totalPlazas = calcularRegistros();
 
         if (posicionDeseada >= totalPlazas) { //no hay registro que desplazar, se acaba el metodo
             return;
@@ -277,7 +304,7 @@ public class GestorBBDD {
 
         ByteBuffer br = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
 
-        for (long i = totalPlazas - 1; i >= posicionDeseada; i--) {
+        for (int i = totalPlazas - 1; i >= posicionDeseada; i--) {
             br.clear();
 
 
@@ -295,11 +322,11 @@ public class GestorBBDD {
      *
      * @return el numero de registros que hay
      */
-    public long calcularRegistros() {
-        long registros = 0;
+    public int calcularRegistros() {
+        int registros = 0;
 
         try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
-            registros = fl.size() / LONGITUD_TOTAL_REGISTRO_EN_BYTES;
+            registros = (int) (fl.size() / LONGITUD_TOTAL_REGISTRO_EN_BYTES);
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
@@ -323,12 +350,4 @@ public class GestorBBDD {
         return texto.trim(); //los bytes que sean espacios en blanco los quita
     }
 
-    static void main() {
-        GestorBBDD gb = new GestorBBDD();
-
-        Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "5678def", "Marca", "seat", "Modelo", "ibiza"));
-        Map<String, String> coche2 = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "opel", "Modelo", "astra"));
-
-        //gb.cargarFicherocsv();
-    }
 }
