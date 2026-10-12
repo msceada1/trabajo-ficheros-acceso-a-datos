@@ -165,6 +165,31 @@ public class GestorBBDD {
     }
 
     /**
+     * Metodo encargado de borrar un registro utilizando el borrado logico, poniendo un 0 en la primera posicion del
+     * registro
+     *
+     * @param posicion la posicion del coche que se desea eliminar
+     * @throws PosicionException si la posicion es mayor que los registros que hay o si es menor que la primera por donde
+     *                           se empieza
+     */
+    public void borrarPorPosicion(int posicion) throws PosicionException {
+        if (posicion >= calcularRegistros() || posicion < 0) {
+            throw new PosicionException("Error: posicion no encontrada");
+        }
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE)) {
+            fl.position(LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion);
+            ByteBuffer bf = ByteBuffer.allocate(1);
+            bf.put((byte) 0); //a la primera posicion se le pone 0 (borrado logico)
+            bf.flip();
+            fl.write(bf);
+
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    /**
      * Metodo que comprueba si un registro ya existe o no
      *
      * @param matricula la matricula del coche a insertar
