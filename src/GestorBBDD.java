@@ -1,12 +1,14 @@
+import exceptions.BorradoException;
 import exceptions.LimiteBytesException;
 import exceptions.PosicionException;
 import exceptions.RegistroDuplicadoException;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
@@ -27,7 +29,6 @@ public class GestorBBDD {
     private static final String THIRD_KEY = "Modelo";
 
     private final Map<String, Integer> campos = new LinkedHashMap<>();
-    private long numeroRegistros; // indica la longitud de registros que hay
     private long registrosBorrados;
 
     // Constructor
@@ -36,26 +37,7 @@ public class GestorBBDD {
         campos.put(SECOND_KEY, MAX_BYTES_MARCA);
         campos.put(THIRD_KEY, MAX_BYTES_MODELO);
 
-        this.numeroRegistros = 0;
         this.registrosBorrados = 0;
-
-        if (Files.exists(RUTA_FICHERO_CARGA_BBDD)) {
-            try {
-                this.numeroRegistros = Files.size(RUTA_FICHERO_CARGA_BBDD) / LONGITUD_TOTAL_REGISTRO_EN_BYTES;
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
-        } else {
-            try {
-                Files.createFile(RUTA_FICHERO_CARGA_BBDD);
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
-        }
-    }
-
-    public long getNumeroRegistros() {
-        return numeroRegistros;
     }
 
     /**
@@ -152,7 +134,7 @@ public class GestorBBDD {
         try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
             try {
                 ByteBuffer bf = ByteBuffer.wrap(pasarRegistroABytes(registroALeer)); //convierte un array de bytes en un Buffer
-                moverRegistro(fl, posicion);//si la posicion estaba ocupada se mueve a la derecha u sus suguientes tambien
+                moverRegistro(fl, posicion);//si la posicion estaba ocupada se mueve a la derecha y sus suguientes tambien
                 fl.position(LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion); //desplazamiento del puntero
                 fl.write(bf);
                 bf.clear();
@@ -162,6 +144,55 @@ public class GestorBBDD {
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    public void borrarPorMatricula(String matricula) throws BorradoException, PosicionException {
+        int pos = buscarPorMatricula(matricula);
+
+        if (pos == -1) {
+            throw new BorradoException("Error: La matricula no ha sido encontrada");
+        }
+
+        borrarPorPosicion(pos);
+    }
+
+
+    private int buscarPorMatricula(String matriculaABuscar) {
+        int totalPlazas = (int) calcularRegistros();
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
+            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+
+
+            for (int i = 0; i < totalPlazas; i++) {
+                fl.read(bf);
+                byte[] arrayBytes = bf.array();
+
+                if (arrayBytes[i] == 0) {
+                    bf.clear();
+                    continue;
+                }
+                int desplazamientoCampo = 0;
+                String valorClaveLeida = null;
+                for (Map.Entry<String, Integer> campo : this.campos.entrySet()) {
+                    if (campo.getKey().equals(PRIMARY_KEY)) {
+                        valorClaveLeida = extraerStringDeBytes(arrayBytes, desplazamientoCampo, campo.getValue());
+                        break;
+                    }
+                    desplazamientoCampo += campo.getValue();
+                }
+
+                if (valorClaveLeida != null && valorClaveLeida.equals(matriculaABuscar)) {
+                    return i;
+                }
+                bf.clear();
+            }
+
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return -1; //no ha encontrado la posicion
     }
 
     /**
@@ -197,10 +228,11 @@ public class GestorBBDD {
      * @throws IOException
      */
     private boolean registroExiste(String matricula) throws IOException {
+        long totalRegistros = calcularRegistros();
         try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
             ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
 
-            for (int i = 0; i < this.numeroRegistros; i++) {
+            for (int i = 0; i < totalRegistros; i++) {
                 fl.read(bf); //vuelca el contenido en el Buffer
                 byte[] lecturaRegistro = bf.array();
 
@@ -295,5 +327,8 @@ public class GestorBBDD {
         GestorBBDD gb = new GestorBBDD();
 
         Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "5678def", "Marca", "seat", "Modelo", "ibiza"));
+        Map<String, String> coche2 = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "opel", "Modelo", "astra"));
+
+        //gb.cargarFicherocsv();
     }
 }
