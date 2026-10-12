@@ -58,7 +58,37 @@ public class GestorBBDD {
         return numeroRegistros;
     }
 
-    private static void cargarFicherocsv() {
+    /**
+     * Metodo encargado de cargar el fichero csv en la base de datos
+     */
+    public void cargarFicheroCSV() {
+        try (BufferedReader br = new BufferedReader(new FileReader(RUTA_FICHERO_CSV.toFile()))) {
+            String linea;
+            boolean esPrimeraLinea = true; //variable que permitira no leer los campos del csv
+
+            while ((linea = br.readLine()) != null) {
+                if (esPrimeraLinea) {
+                    esPrimeraLinea = false;
+                    continue;
+                }
+
+                String[] datos = linea.split(",");
+
+                Map<String, String> coche = new LinkedHashMap<>();
+                coche.put(PRIMARY_KEY, datos[0].trim());
+                coche.put(SECOND_KEY, datos[1].trim());
+                coche.put(THIRD_KEY, datos[2].trim());
+
+                int posAInsetar = (int) calcularRegistros();
+                try {
+                    insertar(coche, posAInsetar);
+                } catch (RegistroDuplicadoException e) {
+                    System.out.println("La matricula " + datos[0] + "existe");
+                }
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     /**
