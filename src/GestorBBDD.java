@@ -239,7 +239,7 @@ public class GestorBBDD {
                 fl.write(br);
             }
 
-            int longitdArchivo = (int) ((totalPlazas - 1) * LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+            int longitdArchivo = ((totalPlazas - 1) * LONGITUD_TOTAL_REGISTRO_EN_BYTES);
             fl.truncate(longitdArchivo);
 
         } catch (IOException e) {
@@ -350,4 +350,30 @@ public class GestorBBDD {
         return texto.trim(); //los bytes que sean espacios en blanco los quita
     }
 
+    static void main() {
+        GestorBBDD gb = new GestorBBDD();
+
+        Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "5678def", "Marca", "seat", "Modelo", "ibiza"));
+        Map<String, String> coche2 = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "opel", "Modelo", "corsa"));
+
+        // gb.cargarFicheroCSV();
+/*-
+        try {
+            gb.borrarPorMatricula("4332BCC");
+        } catch (PosicionException | BorradoException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+ */
+
+        try {
+            gb.insertar(coche2, 0);
+        } catch (RegistroDuplicadoException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
 }
