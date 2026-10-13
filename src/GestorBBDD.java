@@ -169,6 +169,44 @@ public class GestorBBDD {
         borrarPorPosicion(pos);
     }
 
+    /**
+     * Metodo encargado de modificar un registro guardando la matricula original para que esta no sea
+     * cambiada
+     *
+     * @param registroActualizado los nuevos campos a actualizar
+     * @param posicion            la posicion del registro que se desea actualizar
+     * @throws PosicionException si la posicion no ha sido encontrada
+     */
+    public void modificar(Map<String, String> registroActualizado, int posicion) throws PosicionException {
+        int totalPlazas = calcularRegistros();
+
+        if (posicion >= totalPlazas || posicion < 0) {
+            throw new PosicionException("La posicion no ha sido encontrda");
+        }
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
+            int byteIncio = LONGITUD_TOTAL_REGISTRO_EN_BYTES * posicion;
+            fl.position(byteIncio);//desplazamiento puntero
+
+            //guardado de la maticula original
+            ByteBuffer bf = ByteBuffer.allocate(MAX_BYTES_MARCA);
+            fl.read(bf);
+
+            String matriculaOriginal = new String(bf.array()).trim();
+
+            registroActualizado.put(PRIMARY_KEY, matriculaOriginal);
+
+            ByteBuffer bfnuevoNuevo = ByteBuffer.wrap(pasarRegistroABytes(registroActualizado));
+
+            //se vuelve a mover el puntero al inicio
+            fl.position(byteIncio);
+            fl.write(bfnuevoNuevo);
+
+        } catch (IOException | LimiteBytesException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
 
     private int buscarPorMatricula(String matriculaABuscar) {
         int totalPlazas = calcularRegistros();
