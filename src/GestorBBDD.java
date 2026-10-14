@@ -369,7 +369,7 @@ public class GestorBBDD {
      *
      * @return el numero de registros que hay
      */
-    private int calcularRegistros() {
+    public int calcularRegistros() {
         int registros = 0;
 
         try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
@@ -454,12 +454,5 @@ public class GestorBBDD {
         } catch (IOException | LimiteBytesException e) {
             System.out.println(e.getMessage());
         }
-    }
-
-    static void main() {
-        GestorBBDD gb = new GestorBBDD();
-
-        Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "5678def", "Marca", "seat", "Modelo", "ibiza"));
-        Map<String, String> coche2 = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "opel", "Modelo", "corsa"));
     }
 }
