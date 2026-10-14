@@ -1,7 +1,4 @@
-import exceptions.BorradoException;
-import exceptions.LimiteBytesException;
-import exceptions.PosicionException;
-import exceptions.RegistroDuplicadoException;
+import exceptions.*;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -11,12 +8,11 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 public class GestorBBDD {
 
+    //definicion de constantes
     private static final byte ESPACIO_EN_BLANCO = (byte) ' ';
     private static final int MAX_BYTES_MATRICULA = 7;
     private static final int MAX_BYTES_MARCA = 32;
@@ -29,15 +25,12 @@ public class GestorBBDD {
     private static final String THIRD_KEY = "Modelo";
 
     private final Map<String, Integer> campos = new LinkedHashMap<>();
-    private long registrosBorrados;
 
     // Constructor
     public GestorBBDD() {
         campos.put(PRIMARY_KEY, MAX_BYTES_MATRICULA);
         campos.put(SECOND_KEY, MAX_BYTES_MARCA);
         campos.put(THIRD_KEY, MAX_BYTES_MODELO);
-
-        this.registrosBorrados = 0;
     }
 
     /**
@@ -46,7 +39,7 @@ public class GestorBBDD {
     public void cargarFicheroCSV() {
         try (BufferedReader br = new BufferedReader(new FileReader(RUTA_FICHERO_CSV.toFile()))) {
             String linea;
-            boolean esPrimeraLinea = true; //variable que permitira no leer los campos del csv
+            boolean esPrimeraLinea = true; //variable que permitira no leer el nombre de los campos en la primera linea
 
             while ((linea = br.readLine()) != null) {
                 if (esPrimeraLinea) {
@@ -54,7 +47,7 @@ public class GestorBBDD {
                     continue;
                 }
 
-                String[] datos = linea.split(","); //divide los campos
+                String[] datos = linea.split(","); //separa los campos
 
                 Map<String, String> coche = new LinkedHashMap<>();
                 coche.put(PRIMARY_KEY, datos[0].trim());
@@ -65,7 +58,7 @@ public class GestorBBDD {
                 try {
                     insertar(coche, posAInsetar);
                 } catch (RegistroDuplicadoException e) {
-                    System.out.println("La matricula " + datos[0] + "existe");
+                    System.out.println("La matricula " + datos[0] + " existe");
                 }
             }
         } catch (IOException e) {
@@ -159,6 +152,13 @@ public class GestorBBDD {
         }
     }
 
+    /**
+     * Metodo encargado de borrar un registro leyendo la matricula y accediendo a la posicion de esa
+     *
+     * @param matricula la matricula introducida por el usuario
+     * @throws BorradoException  si la matricula no se encuentra
+     * @throws PosicionException
+     */
     public void borrarPorMatricula(String matricula) throws BorradoException, PosicionException {
         int pos = buscarPorMatricula(matricula);
 
@@ -189,7 +189,7 @@ public class GestorBBDD {
             fl.position(byteIncio);//desplazamiento puntero
 
             //guardado de la maticula original
-            ByteBuffer bf = ByteBuffer.allocate(MAX_BYTES_MARCA);
+            ByteBuffer bf = ByteBuffer.allocate(MAX_BYTES_MATRICULA);
             fl.read(bf);
 
             String matriculaOriginal = new String(bf.array()).trim();
@@ -208,6 +208,12 @@ public class GestorBBDD {
     }
 
 
+    /**
+     * Metodo encargado de encontrar la posicion de un registro por su matricula
+     *
+     * @param matriculaABuscar la matricula que el usuario desea buscar
+     * @return -1 no se ha encontrado,  la posicion en caso contrario
+     */
     private int buscarPorMatricula(String matriculaABuscar) {
         int totalPlazas = calcularRegistros();
 
@@ -219,7 +225,8 @@ public class GestorBBDD {
                 fl.read(bf);
                 byte[] arrayBytes = bf.array();
 
-                if (arrayBytes[i] == 0) {
+                //se verifica si la plaza esta vacia
+                if (arrayBytes[0] == 0) {
                     bf.clear();
                     continue;
                 }
@@ -230,6 +237,7 @@ public class GestorBBDD {
                         valorClaveLeida = extraerStringDeBytes(arrayBytes, desplazamientoCampo, campo.getValue());
                         break;
                     }
+                    //se suma el tamaño del campo actual para saber en que byte exacto empieza el siguiente
                     desplazamientoCampo += campo.getValue();
                 }
 
@@ -278,6 +286,7 @@ public class GestorBBDD {
             }
 
             int longitdArchivo = ((totalPlazas - 1) * LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+            //los ultimos 71 bytes se borran del archivo porque son los del coche duplicado
             fl.truncate(longitdArchivo);
 
         } catch (IOException e) {
@@ -360,7 +369,7 @@ public class GestorBBDD {
      *
      * @return el numero de registros que hay
      */
-    public int calcularRegistros() {
+    private int calcularRegistros() {
         int registros = 0;
 
         try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
@@ -373,19 +382,78 @@ public class GestorBBDD {
     }
 
 
-    /*
-    private Map<String, Integer> buscarRegistro() throws IOException {
-        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
-            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
-        }
-    }
-
+    /**
+     * Metodo encargado de extraer texto desde una posicion de un array de bytes
+     *
+     * @param buffer         el array de bytes
+     * @param desplazamiento la posicion del array donde se emoiez< a leer
+     * @param longitud       la longitd de bytes del campo a extraer
+     * @return el texto
      */
-
-
     private String extraerStringDeBytes(byte[] buffer, int desplazamiento, int longitud) {
         String texto = new String(buffer, desplazamiento, longitud, StandardCharsets.UTF_8);
         return texto.trim(); //los bytes que sean espacios en blanco los quita
+    }
+
+    /**
+     * Transforma un registro en un Map
+     *
+     * @param lecturaRegistro
+     * @return
+     */
+    private Map<String, String> extraerRegistroAMapa(byte[] lecturaRegistro) {
+        Map<String, String> registro = new LinkedHashMap<>();
+        int desplazamientoCampo = 0;
+
+        for (Map.Entry<String, Integer> campo : this.campos.entrySet()) {
+            String valor = extraerStringDeBytes(lecturaRegistro, desplazamientoCampo, campo.getValue());
+            registro.put(campo.getKey(), valor);
+            desplazamientoCampo += campo.getValue();
+        }
+
+        return registro;
+    }
+
+    public void ordenarPorMatricula() throws OrdenarException {
+        int totalPlazas = calcularRegistros();
+
+        if (totalPlazas <= 1) {
+            throw new OrdenarException("no hay suficiente registros para ordenar");
+        }
+
+        List<Map<String, String>> listaCoches = new ArrayList<>();
+
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.READ)) {
+            ByteBuffer bf = ByteBuffer.allocate(LONGITUD_TOTAL_REGISTRO_EN_BYTES);
+
+            for (int i = 0; i < totalPlazas; i++) {
+                fl.read(bf);
+
+                if (bf.array()[0] != 0) {
+                    Map<String, String> coche = extraerRegistroAMapa(bf.array());
+                    listaCoches.add(coche);
+                }
+                bf.clear();
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+            return; // Abortamos para no destruir datos
+        }
+
+        listaCoches.sort(Comparator.comparing(c -> c.get(PRIMARY_KEY)));
+
+        try (FileChannel fl = FileChannel.open(RUTA_FICHERO_CARGA_BBDD, StandardOpenOption.WRITE)) {
+            fl.position(0); //desplazamiento del puntero a la posicion inicial
+
+            for (Map<String, String> coche : listaCoches) {
+                ByteBuffer bf = ByteBuffer.wrap(pasarRegistroABytes(coche));
+                fl.write(bf);//escritura ordenada
+            }
+
+        } catch (IOException | LimiteBytesException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     static void main() {
@@ -393,25 +461,5 @@ public class GestorBBDD {
 
         Map<String, String> coche = new LinkedHashMap<>(Map.of("Matricula", "5678def", "Marca", "seat", "Modelo", "ibiza"));
         Map<String, String> coche2 = new LinkedHashMap<>(Map.of("Matricula", "1234abc", "Marca", "opel", "Modelo", "corsa"));
-
-        // gb.cargarFicheroCSV();
-/*-
-        try {
-            gb.borrarPorMatricula("4332BCC");
-        } catch (PosicionException | BorradoException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
- */
-
-        try {
-            gb.insertar(coche2, 0);
-        } catch (RegistroDuplicadoException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
     }
 }
